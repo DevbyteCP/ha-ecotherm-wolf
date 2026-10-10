@@ -1,0 +1,17 @@
+{
+  "domain": "ecotherm_wolf",
+  "name": "EcoTherm Wolf",
+  "codeowners": [
+    "@DevbyteCP"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/DevbyteCP/ha-ecotherm-wolf",
+  "integration_type": "hub",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/DevbyteCP/ha-ecotherm-wolf/issues",
+  "quality_scale": "bronze",
+  "requirements": [
+    "lxml>=5.0"
+  ],
+  "version": "2.0.2"
+}

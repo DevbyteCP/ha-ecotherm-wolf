@@ -1,0 +1,21 @@
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+.coverage
+htmlcov/
+.idea/
+.vscode/
+
+# interne Arbeitsdokumente (Pläne, Spezifikationen, Migration) – nicht versioniert
+docs/superpowers/
+docs/migration-ecotherm-core.md
+
+# Wolf-Dateien werden nicht versioniert (scripts/fetch_wolf_files.py)
+custom_components/ecotherm_wolf/definitions/data/wolf/*.xml
+custom_components/ecotherm_wolf/ism7/client.pfx

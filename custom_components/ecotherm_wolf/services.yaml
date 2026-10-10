@@ -1,0 +1,26 @@
+# EcoTherm Wolf service definitions.
+browse_property:
+  fields:
+    device:
+      required: true
+      example: "1"
+      selector:
+        text:
+    property:
+      required: true
+      example: "vorlauftemp"
+      selector:
+        text:
+
+list_properties:
+  fields:
+    device:
+      required: false
+      selector:
+        text:
+
+rediscover_devices: {}
+
+reload_definitions: {}
+
+diagnose: {}

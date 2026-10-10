@@ -1,0 +1,208 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Step 1 -- Connect to the ISM7",
+        "description": "Connection details for your ISM7 gateway.\n\nNote: The ISM7 only allows one active connection at a time. If you were previously using the ism7mqtt add-on, stop it before setup -- otherwise the connection will fail.",
+        "data": {
+          "host": "Host (IP/hostname)",
+          "port": "Port",
+          "password": "Password"
+        },
+        "data_description": {
+          "host": "IP address or hostname of the ISM7 (e.g. 192.168.1.50).",
+          "port": "TLS port. Default is 9092.",
+          "password": "Password as configured in the ISM7."
+        }
+      },
+      "devices": {
+        "title": "Looking for modules...",
+        "description": "Briefly connecting to the ISM7 to detect attached modules."
+      },
+      "resolve_ambiguous": {
+        "title": "Step 2 -- Clarify device types",
+        "description": "The following modules could not be uniquely identified. Pick the matching device type for each.\n\nHint: CWL ventilation units often report themselves as \"SM1\" -- if you have a CWL, pick it explicitly here.",
+        "data": {
+          "resolve_0": "Module on bus {bus_0} (DID {did_0}, firmware {fw_0})",
+          "resolve_1": "Module on bus {bus_1} (DID {did_1}, firmware {fw_1})",
+          "resolve_2": "Module on bus {bus_2} (DID {did_2}, firmware {fw_2})",
+          "resolve_3": "Module on bus {bus_3} (DID {did_3}, firmware {fw_3})"
+        }
+      },
+      "select_discovered": {
+        "title": "Step 3 -- Select modules",
+        "description": "These modules were detected on the ISM7. All are pre-selected -- you can deselect any you do not want in Home Assistant.",
+        "data": {
+          "selected": "Integrate modules"
+        }
+      },
+      "add_more": {
+        "title": "Step 4 -- Add sub-modules",
+        "description": "Selected so far: {picked}.\n\nSome Wolf modules have sub-components (DHW, mixer circuit, solar) that do not appear as their own bus device. If any were found they are listed above -- the ones confirmed on the bus are pre-checked, the rest you can enable as needed.\n\n{probe_note}\n\nMissing an exotic sub-module? Pick \"add more manually\".",
+        "data": {
+          "submodules": "Detected / possible sub-modules",
+          "add_more": "Yes, add more sub-modules manually"
+        }
+      },
+      "add_device": {
+        "title": "Step 4b -- Add manually",
+        "description": "Pick the device type and enter the bus address.\n\nAdded so far:\n{added}",
+        "data": {
+          "device_type": "Device type",
+          "bus_address": "Read bus address",
+          "write_address": "Write bus address (optional)",
+          "done": "Done -- no more devices to add"
+        },
+        "data_description": {
+          "device_type": "Hint: sub-modules usually end in _BM, _BM-2 or _RM-2.",
+          "bus_address": "Hex with 0x prefix, e.g. 0x35, 0x85, 0x7C. The address the module reports values on.",
+          "write_address": "Leave empty -- for known modules (BM-2, CHA, WWSystem_BM-2 …) the correct write address is filled in automatically, otherwise it equals the read address. Only fill this in if your module needs a different address and wasn't recognised."
+        }
+      },
+      "write_addresses": {
+        "title": "Step 4c -- Review write addresses",
+        "description": "Wolf modules report measured values on one bus address and -- for some modules -- receive control commands on another. The ISM7 detects the read address itself, but not the write address. For known modules (BM-2, CHA) the correct address is already pre-filled; for the rest it equals the read address.\n\nOnly change this if you know better. An empty field = same as the read address.\n\nModules:\n{modules}",
+        "data": {
+          "write_1": "Write address: {mod_1}",
+          "write_2": "Write address: {mod_2}",
+          "write_3": "Write address: {mod_3}",
+          "write_4": "Write address: {mod_4}",
+          "write_5": "Write address: {mod_5}",
+          "write_6": "Write address: {mod_6}",
+          "write_7": "Write address: {mod_7}",
+          "write_8": "Write address: {mod_8}"
+        }
+      },
+      "preset": {
+        "title": "Step 5 -- Choose data scope",
+        "description": "Pick which scope of values should be collected. Counts vary a lot by module -- small sub-modules expose only a handful of values, a heat pump many more:\n\n• Minimal -- just the read-only display values from the standard set (temperatures, status, counters -- no settings). About 1-30 values per module.\n\n• Standard (recommended) -- a proven, hand-picked selection of the most important values per module, including setpoints and operating modes. For common Wolf modules this is a selection tested in everyday use; for rarer modules Wolf's own app selection applies. About 4-45 values per module.\n\n• All values -- complete, everything the module exposes. About 9-160 values per module, longer initialization (~1-2 minutes for several modules).\n\n• Manual -- you pick the values yourself (power-user).",
+        "data": {
+          "preset": "Data scope"
+        }
+      },
+      "select": {
+        "title": "Step 6 -- Select values",
+        "description": "Pick which individual values to import. You can change the selection later via the integration options.",
+        "data": {
+          "selected": "Values"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate -- ISM7 {host}",
+        "description": "The ISM7 rejected the login (invalidcredentials).\n\nTwo possible causes:\n• The password was changed -- enter the new one here.\n• Another client occupies the ISM7's single connection slot (e.g. the ism7mqtt addon or Smartset) -- stop it first and re-enter the existing password.",
+        "data": {
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Connection failed -- check host/IP and port, and that the ISM7 is reachable on the network.",
+      "invalid_auth": "Login rejected -- wrong password, or another client (e.g. the ism7mqtt addon or Smartset) occupies the ISM7's single connection.",
+      "invalid_format": "Invalid format",
+      "invalid_hex": "Bus address must be hex (e.g. 0x35)",
+      "required": "Required",
+      "no_devices_selected": "Pick at least one module",
+      "no_devices_added": "Add at least one module before finishing",
+      "duplicate_device": "This module is already configured (same device type and bus address).",
+      "missing_wolf_files": "Wolf files missing: {files}. Please copy them to {path} (see README) and submit again."
+    },
+    "abort": {
+      "already_configured": "This ISM7 gateway is already configured.",
+      "reauth_successful": "Re-authentication saved -- the integration is reloading."
+    },
+    "progress": {
+      "discovering": "Connecting to the ISM7 and querying the attached modules and sub-modules … This can take a moment."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "EcoTherm Wolf -- Settings",
+        "description": "Choose what you want to adjust:",
+        "menu_options": {
+          "parameters": "Values (which data is collected)",
+          "connection": "Connection (host, port, password)",
+          "advanced": "Advanced (update interval, diagnostics)",
+          "reboot": "ISM7 reboot watchdog"
+        }
+      },
+      "parameters": {
+        "title": "Adjust values",
+        "description": "Pick which values are imported. Changes apply immediately.",
+        "data": {
+          "selected": "Values"
+        }
+      },
+      "connection": {
+        "title": "Adjust connection",
+        "description": "Change host, port or password of the ISM7.",
+        "data": {
+          "host": "Host (IP/hostname)",
+          "port": "Port",
+          "password": "Password"
+        }
+      },
+      "advanced": {
+        "title": "Advanced settings",
+        "description": "Update interval, stale threshold and diagnostic options.",
+        "data": {
+          "heartbeat_seconds": "Update interval (seconds)",
+          "stale_threshold_seconds": "Stale threshold (seconds)",
+          "active_reset_on_stale": "Auto-reset connection on stale",
+          "debug_logging": "Enable debug logging"
+        }
+      },
+      "reboot": {
+        "title": "ISM7 reboot watchdog",
+        "description": "When the reconnect keeps failing after several attempts, reboot the ISM7 gateway automatically over HTTP (/protect/reboot.htm). Stays inactive until a reboot password is set. Threshold 0 = off.",
+        "data": {
+          "reboot_after_failures": "Reboot after X failed reconnect attempts (0 = off)",
+          "reboot_host": "Reboot host (empty = gateway host)",
+          "reboot_username": "Reboot username",
+          "reboot_password": "Reboot password (empty = reboot disabled)",
+          "reboot_notify_service": "Notify service on reboot (e.g. notify.mobile_app_phone; empty = none)"
+        }
+      }
+    }
+  },
+  "services": {
+    "browse_property": {
+      "name": "Read value",
+      "description": "Reads a single value without creating an entity."
+    },
+    "list_properties": {
+      "name": "List available values",
+      "description": "Lists the available values and settings for one device or all devices."
+    },
+    "reload_definitions": {
+      "name": "Reload device definitions",
+      "description": "Reloads device definitions and reports added, removed and changed values."
+    },
+    "rediscover_devices": {
+      "name": "Rediscover devices",
+      "description": "Searches the ISM7 for modules again and updates the existing device list."
+    },
+    "diagnose": {
+      "name": "Show diagnostics",
+      "description": "Shows connection status and technical information for troubleshooting."
+    }
+  },
+  "issues": {
+    "long_stale": {
+      "title": "ISM7 not delivering values",
+      "description": "No values from ISM7 for {minutes} minutes. Restart Wolf Link Home?"
+    },
+    "long_disconnect": {
+      "title": "ISM7 unreachable",
+      "description": "TCP connection to ISM7 has been down for several minutes. Check network and Wolf Link Home."
+    },
+    "override_load_failed": {
+      "title": "Override definitions broken",
+      "description": "At least one XML file in /config/ecotherm_wolf_definitions/ failed to load. Check logs."
+    },
+    "missing_wolf_files": {
+      "title": "Wolf files missing",
+      "description": "EcoTherm Wolf needs the Wolf files device.xml, parameter.xml, converter.xml and client.pfx. Missing: {files}.\n\nPlease copy them to {path}. The integration then starts on its own, no restart needed."
+    }
+  }
+}

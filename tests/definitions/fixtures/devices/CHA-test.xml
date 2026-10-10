@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<device type="CHA-10" displayName="CHA-10/400V (Test)">
+  <parameter id="0x0080" name="vorlauftemp" displayName="Vorlauftemperatur" preset="standard">
+    <codec type="scaled">
+      <base type="int16" unit="°C"/>
+      <scale>10</scale>
+    </codec>
+  </parameter>
+  <parameter id="0x00A1" name="betriebsart" displayName="Betriebsart" preset="standard">
+    <codec type="enum" writable="true">
+      <member value="0">Aus</member>
+      <member value="1">Auto</member>
+      <member value="2">Heizen</member>
+    </codec>
+  </parameter>
+  <parameter id="0x010C" name="sollwert_tag" displayName="Sollwert Tag" preset="extended">
+    <codec type="int16" unit="°C">
+      <min>5</min>
+      <max>30</max>
+    </codec>
+  </parameter>
+</device>

@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ha-ecotherm-wolf"
+version = "0.0.1"
+requires-python = ">=3.12"
+license = { text = "GPL-3.0-or-later" }
+
+[project.optional-dependencies]
+dev = [
+    "homeassistant>=2025.10.0",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "pytest-homeassistant-custom-component>=0.13",
+    "lxml>=5.0",
+    "voluptuous>=0.14",
+    "ruff>=0.5",
+    "mypy>=1.10",
+    "cryptography>=42.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "ASYNC"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+explicit_package_bases = true
+exclude = ["tests/.*"]
+
+[[tool.mypy.overrides]]
+module = "lxml.*"
+ignore_missing_imports = true

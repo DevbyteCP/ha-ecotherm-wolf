@@ -1,0 +1,8 @@
+{
+  "_comment": "Default write-bus-address per DeviceTemplateId, derived from the author's ism7-parameters-Wolf.json (originally produced by zivillian's ism7config tool, which reads Wolf's proprietary LuCon library). Wolf modules can listen for commands on a different bus address than the one they report values on. When read==write the entry can be omitted -- only modules with a divergent write address need a row here. Editable. Note: in the known sample, the divergent modules (DTID 220000, 270000) happen to have write = read - 5, but that is NOT a reliable formula (DTID 40000/230000/360000 have write == read), so this map is kept as an explicit DTID -> write_address lookup.",
+  "write_offsets": {
+    "220000": "0x30",
+    "350000": "0x30",
+    "270000": "0x3"
+  }
+}
