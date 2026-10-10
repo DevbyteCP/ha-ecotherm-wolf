@@ -2,6 +2,22 @@
 
 All notable changes to the **EcoTherm Wolf** integration.
 
+## 2.1.0
+
+First public release.
+
+### Changed
+- **Wolf files are no longer shipped.** `device.xml`, `parameter.xml`,
+  `converter.xml` and `client.pfx` are read from `<config>/ecotherm_wolf/`,
+  a folder HACS updates never touch. Installations that still carry them in
+  the integration folder keep working (fallback).
+- `scripts/fetch_wolf_files.py` downloads the tested versions from
+  zivillian/ism7mqtt and verifies them by SHA-256 (`--from` for a local copy).
+
+### Added
+- Missing Wolf files are reported in the setup wizard and as a repair issue;
+  the entry starts on its own once the files are in place.
+
 ## 2.0.0
 
 ### Fixed

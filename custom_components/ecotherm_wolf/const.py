@@ -83,7 +83,7 @@ RESOURCE_DIR = "ecotherm_wolf"
 # Health pseudo-device) are shown under this manufacturer, matching the
 # EcoTherm Core integration. Keep SW_VERSION in sync with manifest.json.
 MANUFACTURER = "DevbyteCP"
-SW_VERSION = "2.0.2"
+SW_VERSION = "2.1.0"
 
 # Gateway-id used in ISM7 wire requests (``sid`` attribute on
 # ``SystemConfigReq`` and ``gw`` attribute on ``TelegramBundleReq``).
