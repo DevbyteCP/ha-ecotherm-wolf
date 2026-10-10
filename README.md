@@ -2,6 +2,18 @@
 
 **Deine Wolf-Heizung direkt in Home Assistant.**
 
+> **⚠️ Wichtig: Ohne vier Wolf-Dateien funktioniert die Integration nicht.**
+> `device.xml`, `parameter.xml`, `converter.xml` und `client.pfx` sind **nicht**
+> in diesem Repository enthalten. Sie gehören in den Ordner **`/config/ecotherm_wolf/`**
+> und lassen sich im Terminal von Home Assistant mit zwei Befehlen holen:
+>
+> ```sh
+> wget -O /tmp/fetch_wolf_files.py https://raw.githubusercontent.com/DevbyteCP/ha-ecotherm-wolf/main/scripts/fetch_wolf_files.py
+> python3 /tmp/fetch_wolf_files.py /config/ecotherm_wolf
+> ```
+>
+> Weitere Wege (ohne Python, von Hand) unter [Wolf-Dateien bereitstellen](#wolf-dateien-bereitstellen).
+
 EcoTherm Wolf verbindet Home Assistant lokal mit einem **Wolf-ISM7-Gateway**.
 Du kannst Temperaturen, Betriebszustände und Verbrauchszähler anzeigen sowie
 unterstützte Sollwerte und Betriebsarten einstellen. Ein MQTT-Broker ist nicht nötig.
