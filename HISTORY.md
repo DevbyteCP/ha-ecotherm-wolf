@@ -2,6 +2,18 @@
 
 All notable changes to the **EcoTherm Wolf** integration.
 
+## 2.1.1
+
+### Fixed
+- **Mixer module: Konstanttemperatur (MI14) can be set down to 20 °C.**
+  Wolf's catalog lists this value twice (50–80 °C and 20–95 °C); the
+  integration kept the first row, so HA refused values below 50 °C although
+  the BM-2 accepts them. The kept entity and its ID are unchanged.
+
+### Added
+- `definitions/data/curated_ranges.json`: names the catalog variant whose
+  bounds a deduplicated parameter uses. Only verified entries are listed.
+
 ## 2.1.0
 
 First public release.

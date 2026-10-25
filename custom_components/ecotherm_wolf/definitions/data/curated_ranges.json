@@ -1,0 +1,8 @@
+{
+  "_comment": "Bounds overrides for deduplicated catalog rows. Wolf lists one value once per RemoveConditionId variant, and the variants can carry different min/max; the loader keeps the first row. Here DTID -> {kept PTID: variant PTID} names the variant whose bounds the kept row uses instead. The kept PTID stays (entity unique_id). Only add entries verified on a real device. MM (40000) MI14 Konstanttemperatur: 40018 says 50..80, 40065 says 20..95; the BM-2 expert level accepts 20 degC, 46 degC verified 2026-10-25.",
+  "range_variants": {
+    "40000": {
+      "40018": 40065
+    }
+  }
+}

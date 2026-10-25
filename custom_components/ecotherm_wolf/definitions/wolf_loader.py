@@ -64,12 +64,16 @@ def load_wolf_catalog(wolf_dir: Path, *, curated_dir: Path | None = None) -> Cat
         converters = load_converter_templates(converter_xml)
 
     parameters_by_ptid = _load_parameters(parameter_xml, converters)
-    devices = _load_devices(device_xml, parameters_by_ptid)
     # The curated "standard" preset lives next to the wolf/ XML dir, in
     # ``data/curated_standard.json``. Missing / broken file -> empty mapping,
     # the ``standard`` preset then falls back to the <App> heuristic.
     if curated_dir is None:
         curated_dir = wolf_dir.parent
+    # ``data/curated_ranges.json`` names the catalog variant whose bounds a
+    # deduplicated parameter should carry. Missing / broken file -> empty
+    # mapping (the first row's bounds stay, as before).
+    range_variants = _load_curated_ranges(curated_dir / "curated_ranges.json")
+    devices = _load_devices(device_xml, parameters_by_ptid, range_variants)
     curated_standard = _load_curated_standard(curated_dir / "curated_standard.json")
     # ``data/curated_bus_addresses.json`` maps DTID -> default write bus
     # address for modules whose write address differs from their read
@@ -143,6 +147,64 @@ def _load_curated_write_addresses(json_path: Path) -> dict[int, str]:
             )
             continue
         out[dtid] = write_addr.strip()
+    return out
+
+
+def _load_curated_ranges(json_path: Path) -> dict[int, dict[int, int]]:
+    """Load ``curated_ranges.json`` -> ``{DTID: {kept_PTID: variant_PTID}}``.
+
+    Wolf lists one value several times, one row per ``RemoveConditionId``
+    variant, and the variants can carry different min/max (MM MI14
+    Konstanttemperatur: 50..80 vs 20..95). Dedup keeps the first row, whose
+    bounds may be the wrong ones for real installations. Each entry names
+    the variant whose bounds the kept row should use instead; the kept PTID
+    itself stays (it is the entity unique_id). Robust like the other
+    curated files: any failure returns ``{}`` or skips the bad entry.
+    """
+    if not json_path.exists():
+        _LOGGER.debug("Curated ranges file %s not found", json_path)
+        return {}
+    try:
+        raw = json.loads(json_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        _LOGGER.warning("Cannot read curated ranges %s: %s", json_path, e)
+        return {}
+
+    variants = raw.get("range_variants") if isinstance(raw, dict) else None
+    if not isinstance(variants, dict):
+        _LOGGER.warning(
+            "Curated ranges %s: missing or invalid 'range_variants' object",
+            json_path,
+        )
+        return {}
+
+    out: dict[int, dict[int, int]] = {}
+    for dtid_key, mapping in variants.items():
+        try:
+            dtid = int(dtid_key)
+        except (ValueError, TypeError):
+            _LOGGER.warning(
+                "Curated ranges %s: skipping non-integer DTID key %r",
+                json_path, dtid_key,
+            )
+            continue
+        if not isinstance(mapping, dict):
+            _LOGGER.warning(
+                "Curated ranges %s: DTID %d value is not an object -- skipping",
+                json_path, dtid,
+            )
+            continue
+        pairs: dict[int, int] = {}
+        for kept, variant in mapping.items():
+            try:
+                pairs[int(kept)] = int(variant)
+            except (ValueError, TypeError):
+                _LOGGER.warning(
+                    "Curated ranges %s: DTID %d has non-integer entry "
+                    "%r -> %r -- skipping", json_path, dtid, kept, variant,
+                )
+        if pairs:
+            out[dtid] = pairs
     return out
 
 
@@ -420,6 +482,7 @@ def _dedup_key(param: ParameterDefinition) -> tuple[str, str, tuple[int, ...]]:
 def _dedup_device_parameters(
     device_type: str,
     ordered: list[ParameterDefinition],
+    range_variants: dict[int, int] | None = None,
 ) -> dict[int, ParameterDefinition]:
     """Drop redundant catalog rows within one device, keeping the first.
 
@@ -434,6 +497,11 @@ def _dedup_device_parameters(
        Suffixed rows are *copies* -- ``ParameterDefinition`` objects are
        shared across devices via ``parameters_by_ptid``, so we must not
        mutate the shared instance.
+
+    ``range_variants`` (``{kept_PTID: variant_PTID}``, from
+    ``curated_ranges.json``) swaps in the codec of a dropped variant, so the
+    kept row carries that variant's bounds. Only a true variant qualifies:
+    same ``_dedup_key`` and same codec class.
     """
     seen_keys: set[tuple[str, str, tuple[int, ...]]] = set()
     kept: list[ParameterDefinition] = []
@@ -445,6 +513,26 @@ def _dedup_device_parameters(
             continue
         seen_keys.add(key)
         kept.append(param)
+
+    if range_variants:
+        by_ptid = {p.property_id: p for p in ordered}
+        for i, param in enumerate(kept):
+            variant_ptid = range_variants.get(param.property_id)
+            if variant_ptid is None:
+                continue
+            variant = by_ptid.get(variant_ptid)
+            if (
+                variant is None
+                or _dedup_key(variant) != _dedup_key(param)
+                or type(variant.codec) is not type(param.codec)
+            ):
+                _LOGGER.warning(
+                    "Curated range for device %s: PTID %d is not a variant of "
+                    "PTID %d -- keeping catalog bounds",
+                    device_type, variant_ptid, param.property_id,
+                )
+                continue
+            kept[i] = replace(param, codec=variant.codec)
 
     if dropped:
         _LOGGER.debug(
@@ -469,6 +557,7 @@ def _dedup_device_parameters(
 def _load_devices(
     xml_path: Path,
     parameters_by_ptid: dict[int, ParameterDefinition],
+    range_variants: dict[int, dict[int, int]] | None = None,
 ) -> dict[str, DeviceDefinition]:
     """Parse device.xml -> dict mapping device_type (string key) -> DeviceDefinition."""
     tree = etree.parse(str(xml_path))
@@ -508,7 +597,9 @@ def _load_devices(
                 continue
             ordered.append(param)
 
-        params = _dedup_device_parameters(device_type, ordered)
+        params = _dedup_device_parameters(
+            device_type, ordered, (range_variants or {}).get(dtid),
+        )
         if not params:
             # Devices with no resolvable parameters are useless to us.
             continue

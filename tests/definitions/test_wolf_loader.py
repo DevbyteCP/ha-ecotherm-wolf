@@ -22,6 +22,7 @@ from custom_components.ecotherm_wolf.definitions.codecs import (
     ScaledCodec,
 )
 from custom_components.ecotherm_wolf.definitions.wolf_loader import (
+    _load_curated_ranges,
     _load_curated_standard,
     _load_curated_write_addresses,
     load_wolf_catalog,
@@ -43,6 +44,8 @@ WOLF_DIR = (
 CURATED_JSON = WOLF_DIR.parent / "curated_standard.json"
 # The curated write-bus-address map ships in the same data/ directory.
 CURATED_WRITE_JSON = WOLF_DIR.parent / "curated_bus_addresses.json"
+# Curated bounds overrides for deduplicated variants, same data/ directory.
+CURATED_RANGES_JSON = WOLF_DIR.parent / "curated_ranges.json"
 
 # Wolf modules whose write bus address differs from their read address,
 # from the author's ism7-parameters-Wolf.json. DTIDs not listed here have
@@ -686,3 +689,118 @@ def test_catalog_robust_when_curated_write_file_missing(tmp_path: Path) -> None:
             (wolf_copy / xml).write_bytes(src.read_bytes())
     cat = load_wolf_catalog(wolf_copy)
     assert cat.curated_write_addresses == {}
+
+
+def _bounded_param(ptid: int, name: str, lo: int, hi: int) -> str:
+    return (
+        f'<NumericParameterDescriptor PTID="{ptid}">'
+        f"<Name>{name}</Name><UnitName>&#176;C</UnitName>"
+        f"<ReadOnlyConditionId>False</ReadOnlyConditionId>"
+        f"<MinValueCondition>{lo}</MinValueCondition>"
+        f"<MaxValueCondition>{hi}</MaxValueCondition>"
+        f"<Decimals>0</Decimals>"
+        f"</NumericParameterDescriptor>"
+    )
+
+
+def _write_variant_pair(tmp_path: Path) -> Path:
+    """Two rows reading the same telegram with different bounds (MM MI14)."""
+    wolf_dir = tmp_path / "wolf"
+    wolf_dir.mkdir()
+    return _write_wolf_triple(
+        wolf_dir,
+        parameters="\n".join([
+            _bounded_param(100, "Konstanttemperatur", 50, 80),
+            _bounded_param(101, "Konstanttemperatur", 20, 95),
+        ]),
+        converters="\n".join([_converter(100, 7000), _converter(101, 7000)]),
+        parameter_refs=(
+            '<ParameterReference PTID="100"/>'
+            '<ParameterReference PTID="101"/>'
+        ),
+    )
+
+
+def test_curated_range_takes_bounds_from_dropped_variant(tmp_path: Path) -> None:
+    """The kept PTID stays, but its bounds come from the named variant.
+
+    The PTID must not change -- it is the entity unique_id and the stored
+    subscription -- only the codec (min/max) is taken from the variant.
+    """
+    wolf_dir = _write_variant_pair(tmp_path)
+    (tmp_path / "curated_ranges.json").write_text(
+        '{"range_variants": {"10000": {"100": 101}}}', encoding="utf-8",
+    )
+    cat = load_wolf_catalog(wolf_dir, curated_dir=tmp_path)
+    dev = cat.get_device("TESTDEV")
+    assert set(dev.parameters) == {100}
+    codec = dev.parameters[100].codec
+    assert (codec.min_value, codec.max_value) == (20, 95)
+
+
+def test_without_curated_range_first_variant_bounds_stay(tmp_path: Path) -> None:
+    """No curated entry -> unchanged behaviour (first row's bounds)."""
+    wolf_dir = _write_variant_pair(tmp_path)
+    cat = load_wolf_catalog(wolf_dir, curated_dir=tmp_path)
+    codec = cat.get_device("TESTDEV").parameters[100].codec
+    assert (codec.min_value, codec.max_value) == (50, 80)
+
+
+def test_curated_range_ignores_variant_of_other_value(
+    tmp_path: Path, caplog,
+) -> None:
+    """A source PTID that reads a different telegram is not a variant."""
+    wolf_dir = tmp_path / "wolf"
+    wolf_dir.mkdir()
+    _write_wolf_triple(
+        wolf_dir,
+        parameters="\n".join([
+            _bounded_param(100, "Konstanttemperatur", 50, 80),
+            _bounded_param(101, "Konstanttemperatur", 20, 95),
+        ]),
+        converters="\n".join([_converter(100, 7000), _converter(101, 7001)]),
+        parameter_refs=(
+            '<ParameterReference PTID="100"/>'
+            '<ParameterReference PTID="101"/>'
+        ),
+    )
+    (tmp_path / "curated_ranges.json").write_text(
+        '{"range_variants": {"10000": {"100": 101}}}', encoding="utf-8",
+    )
+    with caplog.at_level(logging.WARNING):
+        cat = load_wolf_catalog(wolf_dir, curated_dir=tmp_path)
+    codec = cat.get_device("TESTDEV").parameters[100].codec
+    assert (codec.min_value, codec.max_value) == (50, 80)
+    assert "not a variant" in caplog.text
+
+
+def test_curated_ranges_missing_or_broken_returns_empty(tmp_path: Path) -> None:
+    """Missing file, broken JSON or wrong shape -> empty mapping."""
+    assert _load_curated_ranges(tmp_path / "missing.json") == {}
+    bad = tmp_path / "bad.json"
+    bad.write_text("{ nope", encoding="utf-8")
+    assert _load_curated_ranges(bad) == {}
+    shape = tmp_path / "shape.json"
+    shape.write_text('{"range_variants": [1]}', encoding="utf-8")
+    assert _load_curated_ranges(shape) == {}
+    mixed = tmp_path / "mixed.json"
+    mixed.write_text(
+        '{"range_variants": {"x": {"1": 2}, "40000": {"40018": 40065, "y": 1}}}',
+        encoding="utf-8",
+    )
+    assert _load_curated_ranges(mixed) == {40000: {40018: 40065}}
+
+
+def test_bundled_mm_konstanttemperatur_allows_20_to_95() -> None:
+    """MM MI14 Konstanttemperatur: BM-2 accepts 20 degC, not only 50.
+
+    Verified on a real installation (2026-10-25): set to 46 degC on the
+    BM-2 expert level, Kesselsoll followed. The first catalog row (40018)
+    says 50..80, the variant 40065 says 20..95.
+    """
+    if not WOLF_DIR.exists():
+        pytest.skip("Wolf XMLs not bundled in this checkout")
+    cat = load_wolf_catalog(WOLF_DIR)
+    param = cat.get_device("MM").parameters[40018]
+    assert (param.codec.min_value, param.codec.max_value) == (20, 95)
+    assert 40065 not in cat.get_device("MM").parameters
